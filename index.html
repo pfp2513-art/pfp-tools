@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการเครื่องมือ</title>
+    <!-- โหลด Bootstrap 5 เพื่อให้หน้าตาแอปดูทันสมัยและรองรับมือถือ -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- โหลด Icon ต่างๆ -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    
+    <style>
+        body { background-color: #f0f2f5; font-family: sans-serif; }
+        .app-header { background-color: #1a73e8; color: white; padding: 20px 15px 15px 15px; position: sticky; top: 0; z-index: 1000; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .tool-item { background-color: white; border-radius: 8px; padding: 15px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-left: 4px solid #1a73e8; }
+        .fab { position: fixed; bottom: 30px; right: 20px; width: 60px; height: 60px; border-radius: 50%; font-size: 28px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); z-index: 1000;}
+    </style>
+</head>
+<body>
+
+    <!-- แถบด้านบน (Header) & ช่องค้นหา -->
+    <div class="app-header">
+        <h5 class="mb-3"><i class="bi bi-tools"></i> เครื่องมือ (Tools)</h5>
+        <div class="input-group">
+            <span class="input-group-text bg-white border-0"><i class="bi bi-search text-muted"></i></span>
+            <input type="text" id="searchInput" class="form-control border-0" placeholder="ค้นหารหัส หรือชื่อเครื่องมือ..." onkeyup="searchTools()">
+        </div>
+    </div>
+
+    <!-- พื้นที่สำหรับแสดงรายการอุปกรณ์ -->
+    <div class="container mt-3 mb-5" id="toolList">
+        <!-- รายการจะถูกสร้างอัตโนมัติจาก JavaScript ที่นี่ -->
+    </div>
+
+    <!-- ปุ่มเครื่องหมายบวก (เพิ่มข้อมูล) มุมขวาล่าง -->
+    <button class="btn btn-primary fab d-flex align-items-center justify-content-center" onclick="addTool()">
+        <i class="bi bi-plus"></i>
+    </button>
+
+    <script>
+        // ข้อมูลจำลองเครื่องมือ
+        const toolsData = [
+            { id: "EN-G001C-G", name: "Gas Lex Detecter/EWOO/EW401" },
+            { id: "EN-G001C-L", name: "Gas Detection System/Scott Safety,USA/ Freedom5000" },
+            { id: "EN-G002C-F", name: "Gas Lex Detecter/EWOO/EW403" },
+            { id: "EN-G002C-G", name: "Gas Lex Detecter/EWOO/EW403" },
+            { id: "EN-H001C-L", name: "เครื่องวัดคุณภาพน้ำ PH-TDS/HANNA/ sn:07270324111" }
+        ];
+
+        // ฟังก์ชันสำหรับนำข้อมูลมาวาดเป็นหน้าจอ
+        function renderTools(data) {
+            const listContainer = document.getElementById('toolList');
+            listContainer.innerHTML = ''; // ล้างข้อมูลเก่าออกก่อน
+
+            if (data.length === 0) {
+                listContainer.innerHTML = '<div class="text-center text-muted mt-5">ไม่พบข้อมูลที่ค้นหา</div>';
+                return;
+            }
+
+            data.forEach(tool => {
+                const itemHTML = `
+                    <div class="tool-item d-flex justify-content-between align-items-center">
+                        <div class="me-3">
+                            <div class="fw-bold text-dark">${tool.id}</div>
+                            <div class="text-muted small">${tool.name}</div>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-light btn-sm text-secondary" onclick="editTool('${tool.id}')" title="Edit"><i class="bi bi-pencil-square"></i></button>
+                            <button class="btn btn-light btn-sm text-danger" onclick="deleteTool('${tool.id}')" title="Delete"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </div>
+                `;
+                listContainer.innerHTML += itemHTML;
+            });
+        }
+
+        // ฟังก์ชันระบบค้นหาแบบ Real-time
+        function searchTools() {
+            const keyword = document.getElementById('searchInput').value.toLowerCase();
+            const filteredData = toolsData.filter(tool => 
+                tool.id.toLowerCase().includes(keyword) || 
+                tool.name.toLowerCase().includes(keyword)
+            );
+            renderTools(filteredData); // อัปเดตหน้าจอด้วยข้อมูลที่กรองแล้ว
+        }
+
+        // ฟังก์ชันจำลองเมื่อกดปุ่มต่างๆ
+        function addTool() {
+            alert("กำลังเปิดหน้าต่างสำหรับเพิ่มเครื่องมือใหม่ (ต้องเขียนโค้ดเชื่อม Database เพิ่มเติม)");
+        }
+
+        function editTool(id) {
+            alert("กำลังเปิดหน้าต่างแก้ไขข้อมูลของรหัส: " + id);
+        }
+
+        function deleteTool(id) {
+            if(confirm("คุณต้องการลบข้อมูลรหัส " + id + " ใช่หรือไม่?")) {
+                alert("ลบข้อมูลเรียบร้อยแล้ว");
+            }
+        }
+
+        // สั่งให้แสดงข้อมูลครั้งแรกทันทีที่เปิดหน้าเว็บ
+        renderTools(toolsData);
+    </script>
+</body>
+</html>
