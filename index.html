@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบจัดการเครื่องมือ</title>
-    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     
     <style>
@@ -19,7 +17,6 @@
 </head>
 <body>
 
-    <!-- แถบ Header ค้นหา -->
     <div class="app-header">
         <h5 class="mb-3"><i class="bi bi-tools"></i> เครื่องมือ (Tools)</h5>
         <div class="input-group">
@@ -28,29 +25,53 @@
         </div>
     </div>
 
-    <!-- รายการเครื่องมือ -->
     <div class="container mt-3 mb-5" id="toolList">
         <div class="text-center text-muted mt-5">กำลังโหลดข้อมูล...</div>
     </div>
 
     <!-- ปุ่มเพิ่มข้อมูล -->
-    <button class="btn btn-primary fab d-flex align-items-center justify-content-center" onclick="addTool()">
+    <button class="btn btn-primary fab d-flex align-items-center justify-content-center" onclick="openFormModal('add')">
         <i class="bi bi-plus"></i>
     </button>
 
-    <!-- ป๊อปอัพแสดงรายละเอียด -->
+    <!-- Modal 1: แสดงรายละเอียด -->
     <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
                     <h5 class="modal-title"><i class="bi bi-card-heading me-2"></i>รายละเอียดข้อมูลเครื่องมือ</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body p-0" id="modalDetailContent">
-                    <!-- ตารางแสดงรายละเอียด -->
+                <div class="modal-body p-0" id="modalDetailContent"></div>
+                <div class="modal-footer justify-content-between">
+                    <button type="button" class="btn btn-warning text-dark" id="btnEditTool"><i class="bi bi-pencil-square me-1"></i> แก้ไขข้อมูล</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: ฟอร์มเพิ่ม/แก้ไขข้อมูล -->
+    <div class="modal fade" id="formModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-dark text-white">
+                    <h5 class="modal-title" id="formModalTitle"><i class="bi bi-pencil-square me-2"></i>จัดการข้อมูล</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="toolForm">
+                        <div id="dynamicFormFields"></div>
+                        <hr>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold text-danger"><i class="bi bi-key me-1"></i>รหัสผ่านยืนยันการบันทึก ( Password )</label>
+                            <input type="password" class="form-control" id="adminPassword" placeholder="กรอกรหัสผ่านก่อนกดบันทึก" required>
+                        </div>
+                    </form>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="button" class="btn btn-success" onclick="submitForm()"><i class="bi bi-save me-1"></i> บันทึกข้อมูล</button>
                 </div>
             </div>
         </div>
@@ -59,17 +80,17 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbxbstvAebZJVqSc9oSqKf2LvPCjDt0aYrkyWXdh7jwCZWT3Nfmtz_kMfSNm3x8K2yxZ/exec";
+        const API_URL = "https://script.google.com/macros/s/AKfycbxeX1BiWpH_G-fnkDqEqqxPpd3TQuROuzVoyDStPzIBkW3xAIlAh_m-QOw2hAL4kMpK/exec";
 
         let allToolsData = [];
         let currentDisplayedTools = [];
+        let currentAction = 'add';
+        let currentEditRowIndex = null;
 
-        // ฟังก์ชันดึงข้อมูลด่วนผ่าน LocalStorage
         async function loadToolsFromSheets() {
             const listContainer = document.getElementById('toolList');
-
-            // 1. ดึงจากเครื่องมาโชว์ทันที (0 วินาที)
             const localData = localStorage.getItem('pfp_tools_cache');
+            
             if (localData) {
                 allToolsData = JSON.parse(localData);
                 currentDisplayedTools = allToolsData;
@@ -79,17 +100,14 @@
             }
 
             try {
-                // 2. ดึงข้อมูลอัปเดตล่าสุด
                 const response = await fetch(API_URL);
                 const freshData = await response.json();
-
-                // 3. บันทึกลงเครื่องและอัปเดตหน้าจอ
                 localStorage.setItem('pfp_tools_cache', JSON.stringify(freshData));
                 allToolsData = freshData;
                 currentDisplayedTools = allToolsData;
                 renderTools(allToolsData);
             } catch (error) {
-                console.error("Error loading fresh data:", error);
+                console.error("Error loading data:", error);
             }
         }
 
@@ -103,7 +121,7 @@
             }
 
             data.forEach((tool, index) => {
-                const keys = Object.keys(tool);
+                const keys = Object.keys(tool).filter(k => k !== '_rowIndex');
                 const firstKey = keys[0] || '';
                 const secondKey = keys[1] || '';
 
@@ -124,10 +142,10 @@
             const tool = currentDisplayedTools[index];
             if (!tool) return;
 
-            let tableHTML = '<div class="table-responsive"><table class="table table-striped table-hover mb-0 align-middle">';
-            tableHTML += '<tbody class="border-top-0">';
+            let tableHTML = '<div class="table-responsive"><table class="table table-striped table-hover mb-0 align-middle"><tbody>';
 
             for (const [key, value] of Object.entries(tool)) {
+                if (key === '_rowIndex') continue;
                 tableHTML += `
                     <tr>
                         <th class="bg-light text-secondary px-3 py-2" style="width: 35%; font-size: 0.9rem;">${key}</th>
@@ -135,45 +153,107 @@
                     </tr>
                 `;
             }
-
             tableHTML += '</tbody></table></div>';
 
             document.getElementById('modalDetailContent').innerHTML = tableHTML;
+            document.getElementById('btnEditTool').onclick = function() {
+                bootstrap.Modal.getInstance(document.getElementById('detailModal')).hide();
+                openFormModal('edit', index);
+            };
 
-            const modal = new bootstrap.Modal(document.getElementById('detailModal'));
-            modal.show();
+            new bootstrap.Modal(document.getElementById('detailModal')).show();
+        }
+
+        // เปิด Modal ฟอร์ม (รองรับทั้ง Add และ Edit)
+        function openFormModal(action, index = null) {
+            currentAction = action;
+            document.getElementById('adminPassword').value = '';
+            const fieldsContainer = document.getElementById('dynamicFormFields');
+            fieldsContainer.innerHTML = '';
+
+            let headers = [];
+            let itemData = {};
+
+            if (allToolsData.length > 0) {
+                headers = Object.keys(allToolsData[0]).filter(k => k !== '_rowIndex');
+            } else {
+                headers = ['รหัสเครื่องมือ', 'ชื่อเครื่องมือ'];
+            }
+
+            if (action === 'edit' && index !== null) {
+                itemData = currentDisplayedTools[index];
+                currentEditRowIndex = itemData._rowIndex;
+                document.getElementById('formModalTitle').innerHTML = '<i class="bi bi-pencil-square me-2"></i>แก้ไขข้อมูลเครื่องมือ';
+            } else {
+                currentEditRowIndex = null;
+                document.getElementById('formModalTitle').innerHTML = '<i class="bi bi-plus-circle me-2"></i>เพิ่มเครื่องมือใหม่';
+            }
+
+            headers.forEach(header => {
+                const val = (action === 'edit' && itemData[header] && itemData[header] !== '-') ? itemData[header] : '';
+                fieldsContainer.innerHTML += `
+                    <div class="mb-3">
+                        <label class="form-label fw-bold text-secondary small">${header}</label>
+                        <input type="text" class="form-control dynamic-input" data-header="${header}" value="${val}">
+                    </div>
+                `;
+            });
+
+            new bootstrap.Modal(document.getElementById('formModal')).show();
+        }
+
+        // บันทึกข้อมูลไปยัง Google Sheets
+        async function submitForm() {
+            const password = document.getElementById('adminPassword').value;
+            if (!password) {
+                alert("กรุณากรอกรหัสผ่าน!");
+                return;
+            }
+
+            const formData = {};
+            document.querySelectorAll('.dynamic-input').forEach(input => {
+                formData[input.getAttribute('data-header')] = input.value.trim();
+            });
+
+            const payload = {
+                action: currentAction,
+                password: password,
+                rowIndex: currentEditRowIndex,
+                data: formData
+            };
+
+            const modalInstance = bootstrap.Modal.getInstance(document.getElementById('formModal'));
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify(payload)
+                });
+
+                const res = await response.json();
+
+                if (res.status === 'success') {
+                    alert(currentAction === 'add' ? "เพิ่มข้อมูลสำเร็จ!" : "แก้ไขข้อมูลสำเร็จ!");
+                    modalInstance.hide();
+                    loadToolsFromSheets();
+                } else {
+                    alert("เกิดข้อผิดพลาด: " + res.message);
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                alert("เกิดข้อผิดพลาด ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้");
+            }
         }
 
         function searchTools() {
             const keyword = document.getElementById('searchInput').value.toLowerCase();
             currentDisplayedTools = allToolsData.filter(tool => {
-                return Object.values(tool).some(val => 
-                    String(val).toLowerCase().includes(keyword)
+                return Object.entries(tool).some(([key, val]) => 
+                    key !== '_rowIndex' && String(val).toLowerCase().includes(keyword)
                 );
             });
             renderTools(currentDisplayedTools);
-        }
-
-        async function addTool() {
-            const id = prompt("กรอกรหัสเครื่องมือใหม่:");
-            if (!id) return;
-
-            const name = prompt("กรอกชื่อ/รายละเอียดเครื่องมือ:");
-            if (!name) return;
-
-            try {
-                await fetch(API_URL, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ id: id, name: name })
-                });
-
-                alert("บันทึกข้อมูลสำเร็จ!");
-                loadToolsFromSheets();
-            } catch (error) {
-                console.error("Error:", error);
-                alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
-            }
         }
 
         loadToolsFromSheets();
