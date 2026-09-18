@@ -40,7 +40,7 @@
         <i class="bi bi-plus"></i>
     </button>
 
-    <!-- Modal 1: รายละเอียด -->
+    <!-- Modal รายละเอียด -->
     <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
@@ -57,7 +57,7 @@
         </div>
     </div>
 
-    <!-- Modal 2: ฟอร์มเพิ่ม/แก้ไข -->
+    <!-- Modal ฟอร์มเพิ่ม/แก้ไข -->
     <div class="modal fade" id="formModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
@@ -86,34 +86,35 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbwF4jEkF72ITZ94nAKwtTqBwT2LIajWHOq3agtqT2aZS25pi57X-WrP-wjT7eXI5l5K/exec";
+        // URL Web App ล่าสุดจากหน้า Apps Script
+        const API_URL = "https://script.google.com/macros/s/AKfycbwo2SDU7_O9LxgX5G_EkmQQ_u2LwgaZBQue3-nuMMm7GEEGiWubQKeG24I6oMerRe6Q/exec";
 
         let allToolsData = [];
         let currentDisplayedTools = [];
         let currentAction = 'add';
         let currentEditRowIndex = null;
 
-        // โหลดข้อมูลแบบเร่งด่วนสูงสุด (Instant Render)
         function loadToolsFromSheets() {
             const listContainer = document.getElementById('toolList');
             const syncStatus = document.getElementById('syncStatus');
             const localData = localStorage.getItem('pfp_tools_cache_v2');
 
-            // 1. แสดงผลจาก Cache ทันที 0 วินาที
+            // 1. ดึงจาก Cache ในเครื่องมาแสดงก่อนทันที
             if (localData) {
                 try {
                     allToolsData = JSON.parse(localData);
                     currentDisplayedTools = allToolsData;
                     renderTools(allToolsData);
-                    syncStatus.innerHTML = '<i class="bi bi-arrow-repeat spin"></i> ซิงค์อยู่...';
+                    syncStatus.innerHTML = 'ซิงค์ข้อมูล...';
                 } catch(e) {}
-            } else {
-                syncStatus.innerText = 'กำลังโหลด...';
             }
 
-            // 2. ดึงข้อมูลล่าสุดในเบื้องหลัง
+            // 2. ดึงข้อมูลล่าสุดจาก API
             fetch(API_URL)
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) throw new Error("ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้");
+                    return res.json();
+                })
                 .then(freshData => {
                     localStorage.setItem('pfp_tools_cache_v2', JSON.stringify(freshData));
                     allToolsData = freshData;
@@ -124,6 +125,14 @@
                 .catch(error => {
                     console.error("Sync error:", error);
                     syncStatus.innerText = 'โหมดออฟไลน์';
+                    if (!allToolsData || allToolsData.length === 0) {
+                        listContainer.innerHTML = `
+                            <div class="text-center text-danger mt-5">
+                                <i class="bi bi-exclamation-circle fs-1"></i>
+                                <p class="mt-2 fw-bold">ดึงข้อมูลไม่สำเร็จ</p>
+                                <small class="text-muted">โปรดตรวจสอบการเชื่อมต่ออินเทอร์เน็ตหรือตั้งค่า Apps Script สิทธิ์เป็น Anyone</small>
+                            </div>`;
+                    }
                 });
         }
 
@@ -132,7 +141,7 @@
             listContainer.innerHTML = '';
 
             if (!data || data.length === 0) {
-                listContainer.innerHTML = '<div class="text-center text-muted mt-5">ไม่พบข้อมูล</div>';
+                listContainer.innerHTML = '<div class="text-center text-muted mt-5">ไม่พบข้อมูลเครื่องมือ</div>';
                 return;
             }
 
@@ -259,7 +268,7 @@
                 }
             } catch (error) {
                 console.error("Error:", error);
-                alert("เกิดข้อผิดพลาด ไม่สามารถบันทึกได้");
+                alert("เกิดข้อผิดพลาด ไม่สามารถบันทึกข้อมูลได้");
             } finally {
                 btnSubmit.disabled = false;
                 btnSubmit.innerHTML = '<i class="bi bi-save me-1"></i> บันทึกข้อมูล';
