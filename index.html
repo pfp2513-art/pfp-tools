@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบจัดการเครื่องมือ</title>
+    <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     
     <style>
@@ -17,6 +19,7 @@
 </head>
 <body>
 
+    <!-- แถบ Header ค้นหา -->
     <div class="app-header">
         <h5 class="mb-3"><i class="bi bi-tools"></i> เครื่องมือ (Tools)</h5>
         <div class="input-group">
@@ -25,15 +28,17 @@
         </div>
     </div>
 
+    <!-- รายการเครื่องมือ -->
     <div class="container mt-3 mb-5" id="toolList">
-        <div class="text-center text-muted mt-5">กำลังโหลดข้อมูลจาก Google Sheets...</div>
+        <div class="text-center text-muted mt-5">กำลังโหลดข้อมูล...</div>
     </div>
 
+    <!-- ปุ่มเพิ่มข้อมูล -->
     <button class="btn btn-primary fab d-flex align-items-center justify-content-center" onclick="addTool()">
         <i class="bi bi-plus"></i>
     </button>
 
-    <!-- ป๊อปอัพแสดงรายละเอียดทั้งหมดแบบตาราง -->
+    <!-- ป๊อปอัพแสดงรายละเอียด -->
     <div class="modal fade" id="detailModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
@@ -42,7 +47,7 @@
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body p-0" id="modalDetailContent">
-                    <!-- รายละเอียดจะถูกเติมตรงนี้แบบ dynamic -->
+                    <!-- ตารางแสดงรายละเอียด -->
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
@@ -54,23 +59,37 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbwgntXccfy0VZHxbwf8ISdRZp0DNjT1gDN4sT9p1d9uDfZf-t8tBUeM4xRtdCuCo2vg/exec";
+        const API_URL = "https://script.google.com/macros/s/AKfycbxbstvAebZJVqSc9oSqKf2LvPCjDt0aYrkyWXdh7jwCZWT3Nfmtz_kMfSNm3x8K2yxZ/exec";
 
         let allToolsData = [];
         let currentDisplayedTools = [];
 
+        // ฟังก์ชันดึงข้อมูลด่วนผ่าน LocalStorage
         async function loadToolsFromSheets() {
             const listContainer = document.getElementById('toolList');
-            listContainer.innerHTML = '<div class="text-center text-muted mt-5">กำลังโหลดข้อมูลจาก Google Sheets...</div>';
+
+            // 1. ดึงจากเครื่องมาโชว์ทันที (0 วินาที)
+            const localData = localStorage.getItem('pfp_tools_cache');
+            if (localData) {
+                allToolsData = JSON.parse(localData);
+                currentDisplayedTools = allToolsData;
+                renderTools(allToolsData);
+            } else {
+                listContainer.innerHTML = '<div class="text-center text-muted mt-5">กำลังโหลดข้อมูล...</div>';
+            }
 
             try {
+                // 2. ดึงข้อมูลอัปเดตล่าสุด
                 const response = await fetch(API_URL);
-                allToolsData = await response.json();
+                const freshData = await response.json();
+
+                // 3. บันทึกลงเครื่องและอัปเดตหน้าจอ
+                localStorage.setItem('pfp_tools_cache', JSON.stringify(freshData));
+                allToolsData = freshData;
                 currentDisplayedTools = allToolsData;
                 renderTools(allToolsData);
             } catch (error) {
-                console.error("Error:", error);
-                listContainer.innerHTML = '<div class="text-center text-danger mt-5">เกิดข้อผิดพลาดในการโหลดข้อมูล</div>';
+                console.error("Error loading fresh data:", error);
             }
         }
 
@@ -85,8 +104,8 @@
 
             data.forEach((tool, index) => {
                 const keys = Object.keys(tool);
-                const firstKey = keys[0] || 'ID';
-                const secondKey = keys[1] || 'Name';
+                const firstKey = keys[0] || '';
+                const secondKey = keys[1] || '';
 
                 const itemHTML = `
                     <div class="tool-item d-flex justify-content-between align-items-center" onclick="showDetail(${index})">
@@ -101,7 +120,6 @@
             });
         }
 
-        // แสดงรายละเอียดทุกคอลัมน์ที่มีใน Sheet
         function showDetail(index) {
             const tool = currentDisplayedTools[index];
             if (!tool) return;
@@ -118,7 +136,7 @@
                 `;
             }
 
-            tableHTML += 'tbody></table></div>';
+            tableHTML += '</tbody></table></div>';
 
             document.getElementById('modalDetailContent').innerHTML = tableHTML;
 
@@ -137,7 +155,25 @@
         }
 
         async function addTool() {
-            alert("สามารถเพิ่มฟังก์ชันฟอร์มบันทึกตามคอลัมน์ Sheet ได้ครับ");
+            const id = prompt("กรอกรหัสเครื่องมือใหม่:");
+            if (!id) return;
+
+            const name = prompt("กรอกชื่อ/รายละเอียดเครื่องมือ:");
+            if (!name) return;
+
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ id: id, name: name })
+                });
+
+                alert("บันทึกข้อมูลสำเร็จ!");
+                loadToolsFromSheets();
+            } catch (error) {
+                console.error("Error:", error);
+                alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล");
+            }
         }
 
         loadToolsFromSheets();
