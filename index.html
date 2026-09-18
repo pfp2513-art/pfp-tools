@@ -4,9 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบจัดการเครื่องมือ</title>
-    <!-- โหลด Bootstrap 5 เพื่อให้หน้าตาแอปดูทันสมัยและรองรับมือถือ -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- โหลด Icon ต่างๆ -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     
     <style>
@@ -18,7 +16,6 @@
 </head>
 <body>
 
-    <!-- แถบด้านบน (Header) & ช่องค้นหา -->
     <div class="app-header">
         <h5 class="mb-3"><i class="bi bi-tools"></i> เครื่องมือ (Tools)</h5>
         <div class="input-group">
@@ -27,33 +24,42 @@
         </div>
     </div>
 
-    <!-- พื้นที่สำหรับแสดงรายการอุปกรณ์ -->
     <div class="container mt-3 mb-5" id="toolList">
-        <!-- รายการจะถูกสร้างอัตโนมัติจาก JavaScript ที่นี่ -->
+        <div class="text-center text-muted mt-5">กำลังโหลดข้อมูลจาก Google Sheets...</div>
     </div>
 
-    <!-- ปุ่มเครื่องหมายบวก (เพิ่มข้อมูล) มุมขวาล่าง -->
     <button class="btn btn-primary fab d-flex align-items-center justify-content-center" onclick="addTool()">
         <i class="bi bi-plus"></i>
     </button>
 
     <script>
-        // ข้อมูลจำลองเครื่องมือ
-        const toolsData = [
-            { id: "EN-G001C-G", name: "Gas Lex Detecter/EWOO/EW401" },
-            { id: "EN-G001C-L", name: "Gas Detection System/Scott Safety,USA/ Freedom5000" },
-            { id: "EN-G002C-F", name: "Gas Lex Detecter/EWOO/EW403" },
-            { id: "EN-G002C-G", name: "Gas Lex Detecter/EWOO/EW403" },
-            { id: "EN-H001C-L", name: "เครื่องวัดคุณภาพน้ำ PH-TDS/HANNA/ sn:07270324111" }
-        ];
+        // *** วาง URL เว็บแอปที่ได้จากขั้นที่ 2 ลงในเครื่องหมายคำพูดด้านล่างนี้ ***
+        const API_URL = "https://script.google.com/macros/s/AKfycbxWdmp-EwasCtgT_Mja2106xJRemNDDaD1j6Zim-WupDSjrsh3HgQdWA4409LGpT7w2/exec";
 
-        // ฟังก์ชันสำหรับนำข้อมูลมาวาดเป็นหน้าจอ
+        let allToolsData = [];
+
+        // ฟังก์ชันดึงข้อมูลมาจาก Google Sheets
+        async function loadToolsFromSheets() {
+            const listContainer = document.getElementById('toolList');
+            listContainer.innerHTML = '<div class="text-center text-muted mt-5">กำลังโหลดข้อมูลจาก Google Sheets...</div>';
+
+            try {
+                const response = await fetch(API_URL);
+                allToolsData = await response.json();
+                renderTools(allToolsData);
+            } catch (error) {
+                console.error("Error:", error);
+                listContainer.innerHTML = '<div class="text-center text-danger mt-5">เกิดข้อผิดพลาดในการโหลดข้อมูล กรุณาตรวจสอบ URL</div>';
+            }
+        }
+
+        // ฟังก์ชันวาดข้อมูลลงหน้าจอ
         function renderTools(data) {
             const listContainer = document.getElementById('toolList');
-            listContainer.innerHTML = ''; // ล้างข้อมูลเก่าออกก่อน
+            listContainer.innerHTML = '';
 
-            if (data.length === 0) {
-                listContainer.innerHTML = '<div class="text-center text-muted mt-5">ไม่พบข้อมูลที่ค้นหา</div>';
+            if (!data || data.length === 0) {
+                listContainer.innerHTML = '<div class="text-center text-muted mt-5">ไม่พบข้อมูล</div>';
                 return;
             }
 
@@ -64,43 +70,51 @@
                             <div class="fw-bold text-dark">${tool.id}</div>
                             <div class="text-muted small">${tool.name}</div>
                         </div>
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-light btn-sm text-secondary" onclick="editTool('${tool.id}')" title="Edit"><i class="bi bi-pencil-square"></i></button>
-                            <button class="btn btn-light btn-sm text-danger" onclick="deleteTool('${tool.id}')" title="Delete"><i class="bi bi-trash"></i></button>
-                        </div>
                     </div>
                 `;
                 listContainer.innerHTML += itemHTML;
             });
         }
 
-        // ฟังก์ชันระบบค้นหาแบบ Real-time
+        // ฟังก์ชันค้นหา
         function searchTools() {
             const keyword = document.getElementById('searchInput').value.toLowerCase();
-            const filteredData = toolsData.filter(tool => 
-                tool.id.toLowerCase().includes(keyword) || 
-                tool.name.toLowerCase().includes(keyword)
+            const filteredData = allToolsData.filter(tool => 
+                String(tool.id).toLowerCase().includes(keyword) || 
+                String(tool.name).toLowerCase().includes(keyword)
             );
-            renderTools(filteredData); // อัปเดตหน้าจอด้วยข้อมูลที่กรองแล้ว
+            renderTools(filteredData);
         }
 
-        // ฟังก์ชันจำลองเมื่อกดปุ่มต่างๆ
-        function addTool() {
-            alert("กำลังเปิดหน้าต่างสำหรับเพิ่มเครื่องมือใหม่ (ต้องเขียนโค้ดเชื่อม Database เพิ่มเติม)");
-        }
+        // ฟังก์ชันเพิ่มข้อมูลใหม่ลง Google Sheets
+        async function addTool() {
+            const id = prompt("กรอกรหัสเครื่องมือใหม่ (เช่น EN-G003C-G):");
+            if (!id) return;
 
-        function editTool(id) {
-            alert("กำลังเปิดหน้าต่างแก้ไขข้อมูลของรหัส: " + id);
-        }
+            const name = prompt("กรอกชื่อ/รายละเอียดเครื่องมือ:");
+            if (!name) return;
 
-        function deleteTool(id) {
-            if(confirm("คุณต้องการลบข้อมูลรหัส " + id + " ใช่หรือไม่?")) {
-                alert("ลบข้อมูลเรียบร้อยแล้ว");
+            const listContainer = document.getElementById('toolList');
+            listContainer.innerHTML = '<div class="text-center text-primary mt-5">กำลังบันทึกข้อมูลลง Google Sheets...</div>';
+
+            try {
+                await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ id: id, name: name })
+                });
+
+                alert("บันทึกข้อมูลสำเร็จ!");
+                loadToolsFromSheets(); // โหลดข้อมูลใหม่มาแสดง
+            } catch (error) {
+                console.error("Error:", error);
+                alert("เกิดข้อผิดพลาด ไม่สามารถบันทึกได้");
+                loadToolsFromSheets();
             }
         }
 
-        // สั่งให้แสดงข้อมูลครั้งแรกทันทีที่เปิดหน้าเว็บ
-        renderTools(toolsData);
+        // โหลดข้อมูลทันทีเมื่อเปิดหน้าเว็บ
+        loadToolsFromSheets();
     </script>
 </body>
 </html>
